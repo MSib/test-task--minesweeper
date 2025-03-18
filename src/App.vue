@@ -1,7 +1,21 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import HeaderMenu from '@/components/HeaderMenu.vue'
+</script>
 
 <template>
-  <div>Hello</div>
+  <div>
+    <header class="header">
+      <HeaderMenu />
+    </header>
+
+    <main class="content">
+      <router-view />
+    </main>
+  </div>
 </template>
 
-<style scoped></style>
+<style>
+.content {
+  padding: 10px;
+}
+</style>
