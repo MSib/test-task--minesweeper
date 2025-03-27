@@ -1,12 +1,24 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, useTemplateRef, onMounted } from 'vue'
+import { storeToRefs } from 'pinia'
+import type { RefCell } from '@/types.ts'
 import { useMainStore } from '@/stores/main.js'
+import BoardCell from '@/components/BoardCell.vue'
+// @ts-ignore: calculateSerialNumber is used in the template
+import { calculateSerialNumber } from '@/gameLogic.ts'
 
 const store = useMainStore()
-const { toggleDisplayOfSettings } = store
-
+const { toggleDisplayOfSettings, setCellsRef } = store
+const { selectedMode } = storeToRefs(store)
+const refs = useTemplateRef('cellRef')
 const timer = ref(0)
 const counter = ref(100)
+
+onMounted(() => {
+  if (refs.value) {
+    setCellsRef(refs.value as unknown as RefCell[])
+  }
+})
 </script>
 
 <template>
@@ -26,8 +38,15 @@ const counter = ref(100)
         <span class="timer__icon">⏱️</span><span class="timer__value">{{ timer }}</span>
       </p>
     </div>
-    <div class="cells">
-      <!-- cell -->
+    <div class="cells" :style="`--columns: ${selectedMode.cols}`">
+      <template v-for="row in selectedMode.rows" :key="row">
+        <template
+          v-for="col in selectedMode.cols"
+          :key="calculateSerialNumber(row, col, selectedMode.cols)"
+        >
+          <BoardCell :row="row" :col="col" ref="cellRef" />
+        </template>
+      </template>
     </div>
   </div>
 </template>
@@ -52,6 +71,7 @@ const counter = ref(100)
   border: 2px solid transparent;
   border-radius: 4px;
   font-size: inherit;
+  user-select: none;
 }
 
 .counter__value,
@@ -68,6 +88,7 @@ const counter = ref(100)
   cursor: pointer;
   border: 2px solid transparent;
   border-radius: 4px;
+  user-select: none;
 }
 
 .counter__icon,
@@ -93,7 +114,12 @@ const counter = ref(100)
   max-width: max-content;
   margin: 0 auto;
   padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), 1fr);
+  justify-items: start;
   border-radius: 4px;
   background-color: #555;
+  overflow-y: auto;
+  user-select: none;
 }
 </style>
