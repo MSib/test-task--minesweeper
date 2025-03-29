@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import { defineStore } from 'pinia'
 import type { GameOptions, RefCell } from '@/types.ts'
 import { modes, type Mode } from '@/gameModes.ts'
-import { createField, calculateSerialNumber, MINED_CELL } from '@/gameLogic.ts'
+import { createField, calculateSerialNumber, showOpenableCells, MINED_CELL } from '@/gameLogic.ts'
 
 export const useMainStore = defineStore('main', () => {
   const settingsAreDisplayed = ref(true)
@@ -37,15 +37,20 @@ export const useMainStore = defineStore('main', () => {
     field.value = null
   }
   function cellClicked(row: number, col: number) {
-    const sn = calculateSerialNumber(row, col, selectedMode.value.cols)
     if (!field.value) {
       field.value = createField(selectedMode.value, row, col)
     }
     const openedCell = field.value[row - 1][col - 1]
-    cellsRef.value[sn - 1].open(openedCell)
-
+    const isDetonation = openedCell === MINED_CELL
+    const openableCells = showOpenableCells(field.value, row, col)
+    openableCells.forEach(([fieldRow, fieldCol]) => {
+      const sn = calculateSerialNumber(fieldRow + 1, fieldCol + 1, selectedMode.value.cols)
+      cellsRef.value[sn - 1].open(field.value![fieldRow][fieldCol])
+    })
     // check game over conditions
-    // const isDetonation = openedCell === MINED_CELL
+    if (isDetonation) {
+      console.log('Boom 💣')
+    }
   }
 
   function toggleFlag(row: number, col: number) {
