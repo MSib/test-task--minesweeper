@@ -9,6 +9,7 @@ export const useMainStore = defineStore('main', () => {
   const selectedMode: Ref<Mode> = ref(modes.find((mode) => mode.name === 'easy')!)
   const field = ref<number[][] | null>(null)
   const cellsRef = ref<RefCell[]>([])
+  const flagsAvailable = ref(0)
 
   function toggleDisplayOfSettings() {
     settingsAreDisplayed.value = !settingsAreDisplayed.value
@@ -29,6 +30,7 @@ export const useMainStore = defineStore('main', () => {
       chosenMode.mines = options.mines
     }
     selectedMode.value = chosenMode
+    flagsAvailable.value = chosenMode.mines
     settingsAreDisplayed.value = false
   }
 
@@ -36,6 +38,7 @@ export const useMainStore = defineStore('main', () => {
     cellsRef.value = refs
     field.value = null
   }
+
   function cellClicked(row: number, col: number) {
     if (!field.value) {
       field.value = createField(selectedMode.value, row, col)
@@ -57,6 +60,14 @@ export const useMainStore = defineStore('main', () => {
     const sn = calculateSerialNumber(row, col, selectedMode.value.cols)
     cellsRef.value[sn - 1].marked()
   }
+
+  function incrementFlag() {
+    flagsAvailable.value++
+  }
+
+  function decrementFlag() {
+    flagsAvailable.value--
+  }
   return {
     settingsAreDisplayed,
     toggleDisplayOfSettings,
@@ -68,5 +79,8 @@ export const useMainStore = defineStore('main', () => {
     setCellsRef,
     cellClicked,
     toggleFlag,
+    flagsAvailable,
+    incrementFlag,
+    decrementFlag,
   }
 })

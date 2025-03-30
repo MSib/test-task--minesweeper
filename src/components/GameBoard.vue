@@ -9,10 +9,9 @@ import { calculateSerialNumber } from '@/gameLogic.ts'
 
 const store = useMainStore()
 const { toggleDisplayOfSettings, setCellsRef } = store
-const { selectedMode } = storeToRefs(store)
+const { selectedMode, flagsAvailable } = storeToRefs(store)
 const refs = useTemplateRef('cellRef')
 const timer = ref(0)
-const counter = ref(100)
 
 onMounted(() => {
   if (refs.value) {
@@ -26,7 +25,7 @@ onMounted(() => {
     <div class="bar">
       <p class="counter" title="Количество оставшихся флажков">
         <span class="counter__icon">🚩</span>
-        <span class="counter__value">{{ counter }}</span>
+        <span class="counter__value">{{ flagsAvailable }}</span>
       </p>
       <button class="restart" title="Перезапуск">
         <span class="restart__icon">🔄</span>
