@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, useTemplateRef, onMounted } from 'vue'
+import { useTemplateRef, onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import type { RefCell } from '@/types.ts'
 import { useMainStore } from '@/stores/main.js'
@@ -8,12 +8,16 @@ import BoardCell from '@/components/BoardCell.vue'
 import { calculateSerialNumber } from '@/gameLogic.ts'
 
 const store = useMainStore()
-const { toggleDisplayOfSettings, setCellsRef } = store
-const { selectedMode, flagsAvailable } = storeToRefs(store)
+const { toggleDisplayOfSettings, setCellsRef, restartGame } = store
+const { selectedMode, flagsAvailable, timer } = storeToRefs(store)
 const refs = useTemplateRef('cellRef')
-const timer = ref(0)
+
+function resetHandler() {
+  restartGame()
+}
 
 onMounted(() => {
+  restartGame()
   if (refs.value) {
     setCellsRef(refs.value as unknown as RefCell[])
   }
@@ -27,7 +31,7 @@ onMounted(() => {
         <span class="counter__icon">🚩</span>
         <span class="counter__value">{{ flagsAvailable }}</span>
       </p>
-      <button class="restart" title="Перезапуск">
+      <button @click="resetHandler" class="restart" title="Перезапуск">
         <span class="restart__icon">🔄</span>
       </button>
       <button @click="toggleDisplayOfSettings" class="settings" title="Настройки">

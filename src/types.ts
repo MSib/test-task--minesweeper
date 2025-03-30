@@ -8,4 +8,5 @@ export interface GameOptions {
 export interface RefCell {
   open: (value: number) => void
   marked: () => void
+  reset: () => void
 }

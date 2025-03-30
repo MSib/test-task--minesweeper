@@ -35,6 +35,7 @@ const computedValue = computed(() => {
 defineExpose({
   open,
   marked: changeFlag,
+  reset: resetCell,
 })
 
 const { row, col } = defineProps({
@@ -90,6 +91,14 @@ function changeFlag() {
   return isFlagged.value
 }
 
+function resetCell() {
+  cell.value = null
+  cellValue.value = ''
+  isOpen.value = false
+  isFlagged.value = false
+  currentFlag.value = flagTypes.none
+}
+
 onMounted(() => {})
 </script>
 
@@ -112,14 +121,14 @@ onMounted(() => {})
 .cell {
   --side-size: 28px;
   --border-size: 1px;
-  --cell-color-1: #00e; /* 1 - синяя */
-  --cell-color-2: #070; /* 2 - зелёная */
-  --cell-color-3: #e00; /* 3 - красная */
-  --cell-color-4: #009; /* 4 — тёмно-синяя */
-  --cell-color-5: #900; /* 5 — коричневая */
-  --cell-color-6: #077; /* 6 — бирюзовая */
-  --cell-color-7: #000; /* 7 - чёрная */
-  --cell-color-8: #fff; /* 8 - белая */
+  --cell-color-1: #00e;
+  --cell-color-2: #070;
+  --cell-color-3: #e00;
+  --cell-color-4: #009;
+  --cell-color-5: #900;
+  --cell-color-6: #077;
+  --cell-color-7: #000;
+  --cell-color-8: #fff;
   --cell-color: var(--cell-color-7);
   width: var(--side-size);
   height: var(--side-size);

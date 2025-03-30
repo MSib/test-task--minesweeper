@@ -10,6 +10,8 @@ export const useMainStore = defineStore('main', () => {
   const field = ref<number[][] | null>(null)
   const cellsRef = ref<RefCell[]>([])
   const flagsAvailable = ref(0)
+  const timer = ref(0)
+  const timerId = ref<number | undefined>(undefined)
 
   function toggleDisplayOfSettings() {
     settingsAreDisplayed.value = !settingsAreDisplayed.value
@@ -34,6 +36,18 @@ export const useMainStore = defineStore('main', () => {
     settingsAreDisplayed.value = false
   }
 
+  function restartGame() {
+    if (!field.value) {
+      return
+    }
+    clearTimer()
+    field.value = null
+    cellsRef.value.forEach((cell) => {
+      cell.reset()
+    })
+    flagsAvailable.value = selectedMode.value.mines
+  }
+
   function setCellsRef(refs: RefCell[]) {
     cellsRef.value = refs
     field.value = null
@@ -42,6 +56,7 @@ export const useMainStore = defineStore('main', () => {
   function cellClicked(row: number, col: number) {
     if (!field.value) {
       field.value = createField(selectedMode.value, row, col)
+      startTimer()
     }
     const openedCell = field.value[row - 1][col - 1]
     const isDetonation = openedCell === MINED_CELL
@@ -68,6 +83,26 @@ export const useMainStore = defineStore('main', () => {
   function decrementFlag() {
     flagsAvailable.value--
   }
+
+  function startTimer() {
+    const timerStartTime = Date.now()
+    timerId.value = setInterval(() => {
+      timer.value = Math.floor((Date.now() - timerStartTime) / 1000)
+    }, 1000)
+  }
+
+  function stopTimer() {
+    clearInterval(timerId.value)
+    timerId.value = undefined
+  }
+
+  function clearTimer() {
+    if (timerId.value) {
+      stopTimer()
+    }
+    timer.value = 0
+  }
+
   return {
     settingsAreDisplayed,
     toggleDisplayOfSettings,
@@ -75,6 +110,7 @@ export const useMainStore = defineStore('main', () => {
     selectedMode,
     selectMode,
     startGame,
+    restartGame,
     cellsRef,
     setCellsRef,
     cellClicked,
@@ -82,5 +118,6 @@ export const useMainStore = defineStore('main', () => {
     flagsAvailable,
     incrementFlag,
     decrementFlag,
+    timer,
   }
 })
