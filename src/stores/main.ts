@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
 import { defineStore } from 'pinia'
-import type { GameOptions, RefCell } from '@/types.ts'
+import { useLocalStorage } from '@vueuse/core'
+import type { GameOptions, RefCell, Winner } from '@/types.ts'
 import { modes, type Mode } from '@/gameModes.ts'
 import { createField, calculateSerialNumber, showOpenableCells, MINED_CELL } from '@/gameLogic.ts'
 
@@ -9,9 +10,15 @@ export const useMainStore = defineStore('main', () => {
   const selectedMode: Ref<Mode> = ref(modes.find((mode) => mode.name === 'easy')!)
   const field = ref<number[][] | null>(null)
   const cellsRef = ref<RefCell[]>([])
+  const dialogRef = ref<HTMLDialogElement | null>(null)
+  const dialogInputRef = ref<HTMLInputElement | null>(null)
   const flagsAvailable = ref(0)
   const timer = ref(0)
   const timerId = ref<number | undefined>(undefined)
+  const movesRemaining = ref<number>(0)
+  const won = ref(false)
+  const gameOver = ref(false)
+  const winners = useLocalStorage('winners', [] as Winner[])
 
   function toggleDisplayOfSettings() {
     settingsAreDisplayed.value = !settingsAreDisplayed.value
@@ -32,7 +39,11 @@ export const useMainStore = defineStore('main', () => {
       chosenMode.mines = options.mines
     }
     selectedMode.value = chosenMode
-    flagsAvailable.value = chosenMode.mines
+    flagsAvailable.value = selectedMode.value.mines
+    movesRemaining.value =
+      selectedMode.value.rows * selectedMode.value.cols - selectedMode.value.mines
+    won.value = false
+    gameOver.value = false
     settingsAreDisplayed.value = false
   }
 
@@ -46,6 +57,10 @@ export const useMainStore = defineStore('main', () => {
       cell.reset()
     })
     flagsAvailable.value = selectedMode.value.mines
+    movesRemaining.value =
+      selectedMode.value.rows * selectedMode.value.cols - selectedMode.value.mines
+    won.value = false
+    gameOver.value = false
   }
 
   function setCellsRef(refs: RefCell[]) {
@@ -53,7 +68,15 @@ export const useMainStore = defineStore('main', () => {
     field.value = null
   }
 
+  function setDialogRef(dialog: HTMLDialogElement, input: HTMLInputElement) {
+    dialogRef.value = dialog ?? null
+    dialogInputRef.value = input ?? null
+  }
+
   function cellClicked(row: number, col: number) {
+    if (gameOver.value) {
+      return
+    }
     if (!field.value) {
       field.value = createField(selectedMode.value, row, col)
       startTimer()
@@ -63,15 +86,23 @@ export const useMainStore = defineStore('main', () => {
     const openableCells = showOpenableCells(field.value, row, col)
     openableCells.forEach(([fieldRow, fieldCol]) => {
       const sn = calculateSerialNumber(fieldRow + 1, fieldCol + 1, selectedMode.value.cols)
-      cellsRef.value[sn - 1].open(field.value![fieldRow][fieldCol])
+      const isOpen = cellsRef.value[sn - 1].open(field.value![fieldRow][fieldCol])
+      if (isOpen && field.value![fieldRow][fieldCol] !== MINED_CELL) {
+        movesRemaining.value--
+      }
     })
-    // check game over conditions
+    if (movesRemaining.value === 0 && !isDetonation) {
+      stopGame(true)
+    }
     if (isDetonation) {
-      console.log('Boom 💣')
+      stopGame(false)
     }
   }
 
   function toggleFlag(row: number, col: number) {
+    if (gameOver.value) {
+      return
+    }
     const sn = calculateSerialNumber(row, col, selectedMode.value.cols)
     cellsRef.value[sn - 1].marked()
   }
@@ -103,6 +134,35 @@ export const useMainStore = defineStore('main', () => {
     timer.value = 0
   }
 
+  function stopGame(isWon: boolean = false) {
+    stopTimer()
+    gameOver.value = true
+    if (!isWon) {
+      return
+    }
+    won.value = true
+    dialogRef.value?.showModal()
+  }
+
+  function addWinner(name: string) {
+    if (won.value) {
+      const MAX_WINNERS = 10
+      let preparedWinners = [...winners.value]
+      preparedWinners.push({
+        name: name || 'Аноним',
+        time: timer.value,
+        mode: selectedMode.value.label,
+      })
+      preparedWinners.sort((a, b) => a.time - b.time)
+      preparedWinners = preparedWinners.filter((_, index) => index < MAX_WINNERS)
+      winners.value = preparedWinners
+    }
+  }
+
+  function clearWinners() {
+    winners.value = []
+  }
+
   return {
     settingsAreDisplayed,
     toggleDisplayOfSettings,
@@ -113,11 +173,17 @@ export const useMainStore = defineStore('main', () => {
     restartGame,
     cellsRef,
     setCellsRef,
+    setDialogRef,
     cellClicked,
     toggleFlag,
     flagsAvailable,
     incrementFlag,
     decrementFlag,
     timer,
+    won,
+    gameOver,
+    winners,
+    addWinner,
+    clearWinners,
   }
 })

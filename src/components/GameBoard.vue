@@ -8,12 +8,19 @@ import BoardCell from '@/components/BoardCell.vue'
 import { calculateSerialNumber } from '@/gameLogic.ts'
 
 const store = useMainStore()
-const { toggleDisplayOfSettings, setCellsRef, restartGame } = store
-const { selectedMode, flagsAvailable, timer } = storeToRefs(store)
+const { toggleDisplayOfSettings, setCellsRef, setDialogRef, restartGame, addWinner } = store
+const { selectedMode, flagsAvailable, timer, won, gameOver } = storeToRefs(store)
 const refs = useTemplateRef('cellRef')
+const dialogRef = useTemplateRef('dialog')
+const dialogInputRef = useTemplateRef('dialogInput')
 
-function resetHandler() {
-  restartGame()
+function closeDialog() {
+  if (dialogRef.value) {
+    dialogRef.value.close()
+    if (dialogInputRef.value) {
+      addWinner(dialogInputRef.value.value)
+    }
+  }
 }
 
 onMounted(() => {
@@ -21,6 +28,7 @@ onMounted(() => {
   if (refs.value) {
     setCellsRef(refs.value as unknown as RefCell[])
   }
+  setDialogRef(dialogRef.value!, dialogInputRef.value!)
 })
 </script>
 
@@ -31,7 +39,7 @@ onMounted(() => {
         <span class="counter__icon">🚩</span>
         <span class="counter__value">{{ flagsAvailable }}</span>
       </p>
-      <button @click="resetHandler" class="restart" title="Перезапуск">
+      <button @click="restartGame" class="restart" title="Перезапуск">
         <span class="restart__icon">🔄</span>
       </button>
       <button @click="toggleDisplayOfSettings" class="settings" title="Настройки">
@@ -41,7 +49,11 @@ onMounted(() => {
         <span class="timer__icon">⏱️</span><span class="timer__value">{{ timer }}</span>
       </p>
     </div>
-    <div class="cells" :style="`--columns: ${selectedMode.cols}`">
+    <div
+      :class="{ defeat: gameOver && !won, win: won }"
+      :style="`--columns: ${selectedMode.cols}`"
+      class="cells"
+    >
       <template v-for="row in selectedMode.rows" :key="row">
         <template
           v-for="col in selectedMode.cols"
@@ -51,6 +63,21 @@ onMounted(() => {
         </template>
       </template>
     </div>
+    <dialog id="winnerDialog" class="dialog" ref="dialog">
+      <p class="dialog__text">Вы победили!</p>
+      <div class="dialog__inner">
+        <label for="name">Введите имя:</label>
+        <input
+          @keyup.enter="closeDialog"
+          type="text"
+          name="name"
+          id="name"
+          class="dialog__input"
+          ref="dialogInput"
+        />
+        <button @click="closeDialog" type="button" class="dialog__button">OK</button>
+      </div>
+    </dialog>
   </div>
 </template>
 
@@ -124,5 +151,48 @@ onMounted(() => {
   background-color: #555;
   overflow-y: auto;
   user-select: none;
+}
+.cells.win {
+  background-color: #5d5;
+}
+.cells.defeat {
+  background-color: #d55;
+}
+.dialog {
+  border: 8px solid #000;
+  border-style: groove ridge ridge groove;
+  border-radius: 6px;
+  box-shadow: 0 0 0px 4px #fff;
+}
+.dialog::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+.dialog__text {
+  margin: 0 0 10px;
+  text-align: center;
+  font-size: 1.5em;
+  font-weight: bold;
+}
+.dialog__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.dialog__input {
+  padding: 8px;
+  font: inherit;
+  font-size: 1.2em;
+  text-align: center;
+  border-radius: 6px;
+}
+.dialog__button {
+  padding: 8px 24px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border-width: 4px;
+  border-radius: 6px;
+  cursor: pointer;
 }
 </style>

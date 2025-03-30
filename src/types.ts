@@ -6,7 +6,13 @@ export interface GameOptions {
 }
 
 export interface RefCell {
-  open: (value: number) => void
+  open: (value: number) => boolean
   marked: () => void
   reset: () => void
+}
+
+export interface Winner {
+  name: string
+  time: number
+  mode: string
 }

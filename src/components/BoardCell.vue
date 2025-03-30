@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { storeToRefs } from 'pinia'
 import { useMainStore } from '@/stores/main.js'
 import { MINED_CELL } from '@/gameLogic.ts'
 
@@ -45,7 +44,6 @@ const { row, col } = defineProps({
 
 const store = useMainStore()
 const { cellClicked, toggleFlag, incrementFlag, decrementFlag } = store
-const { flagsAvailable } = storeToRefs(store)
 
 function handleClick() {
   if (isOpen.value || isFlagged.value) {
@@ -66,9 +64,13 @@ function open(value: number) {
   if (isFlagged.value) {
     return
   }
+  if (isOpen.value) {
+    return false
+  }
   currentFlag.value = flagTypes.none
   cellValue.value = value.toString()
   isOpen.value = true
+  return true
 }
 
 function changeFlag() {
