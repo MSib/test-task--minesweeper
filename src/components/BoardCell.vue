@@ -9,7 +9,7 @@ const cellValue = ref('')
 const isOpen = ref(false)
 const isFlagged = ref(false)
 
-const isLongPress = ref(false)
+const isLongTouchPress = ref(false)
 const longPressTimerId = ref<number | undefined>(undefined)
 
 const flagTypes = {
@@ -49,7 +49,8 @@ const store = useMainStore()
 const { cellClicked, toggleFlag, incrementFlag, decrementFlag } = store
 
 function handleClick() {
-  if (isLongPress.value) {
+  if (isLongTouchPress.value) {
+    isLongTouchPress.value = false
     return
   }
 
@@ -109,11 +110,11 @@ function resetCell() {
 }
 
 function handleTouchStart() {
-  const LONG_PRESS_DELAY = 500
+  const LONG_PRESS_DELAY = 300
   clearTimeout(longPressTimerId.value)
-  isLongPress.value = false
+  isLongTouchPress.value = false
   longPressTimerId.value = setTimeout(() => {
-    isLongPress.value = true
+    isLongTouchPress.value = true
     if ('vibrate' in navigator) {
       navigator.vibrate(100)
     }
@@ -123,7 +124,7 @@ function handleTouchStart() {
 
 function handleTouchEnd() {
   clearTimeout(longPressTimerId.value)
-  isLongPress.value = false
+  // isLongTouchPress.value = false
 }
 
 onMounted(() => {})
