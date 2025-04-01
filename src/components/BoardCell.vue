@@ -9,6 +9,9 @@ const cellValue = ref('')
 const isOpen = ref(false)
 const isFlagged = ref(false)
 
+const isLongPress = ref(false)
+const longPressTimerId = ref<number | undefined>(undefined)
+
 const flagTypes = {
   none: '',
   flag: '🚩',
@@ -46,14 +49,18 @@ const store = useMainStore()
 const { cellClicked, toggleFlag, incrementFlag, decrementFlag } = store
 
 function handleClick() {
+  if (isLongPress.value) {
+    return
+  }
+
   if (isOpen.value || isFlagged.value) {
     return
   }
   cellClicked(row, col)
 }
 
-function handleRightClick(evt: MouseEvent) {
-  evt.preventDefault()
+function handleRightClick(evt?: MouseEvent) {
+  evt?.preventDefault()
   if (isOpen.value) {
     return
   }
@@ -101,11 +108,31 @@ function resetCell() {
   currentFlag.value = flagTypes.none
 }
 
+function handleTouchStart() {
+  const LONG_PRESS_DELAY = 500
+  clearTimeout(longPressTimerId.value)
+  isLongPress.value = false
+  longPressTimerId.value = setTimeout(() => {
+    isLongPress.value = true
+    if ('vibrate' in navigator) {
+      navigator.vibrate(100)
+    }
+    handleRightClick()
+  }, LONG_PRESS_DELAY)
+}
+
+function handleTouchEnd() {
+  clearTimeout(longPressTimerId.value)
+  isLongPress.value = false
+}
+
 onMounted(() => {})
 </script>
 
 <template>
   <button
+    @touchstart="handleTouchStart"
+    @touchend="handleTouchEnd"
     @click="handleClick"
     @contextmenu="handleRightClick"
     :class="{ open: isOpen, mined: cellValue === MINED_CELL.toString() && isOpen }"
@@ -132,6 +159,7 @@ onMounted(() => {})
   --cell-color-7: #000;
   --cell-color-8: #fff;
   --cell-color: var(--cell-color-7);
+  padding: 0;
   width: var(--side-size);
   height: var(--side-size);
   display: flex;
@@ -143,6 +171,10 @@ onMounted(() => {})
   background: #efefef;
   color: #000;
   font-size: 20px;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .cell:disabled {
