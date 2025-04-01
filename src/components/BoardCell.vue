@@ -132,6 +132,7 @@ onMounted(() => {})
   --cell-color-7: #000;
   --cell-color-8: #fff;
   --cell-color: var(--cell-color-7);
+  padding: 0;
   width: var(--side-size);
   height: var(--side-size);
   display: flex;
