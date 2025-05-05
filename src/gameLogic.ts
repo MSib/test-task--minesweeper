@@ -27,7 +27,8 @@ function miningField(
   excludedGridCol: number
 ) {
   let minesCount = 0
-  while (minesCount < minesTotal) {
+  const protectedMinesCount = Math.min(minesTotal, grid.length * grid[0].length - 1)
+  while (minesCount < protectedMinesCount) {
     const row = random(0, grid.length - 1)
     const col = random(0, grid[0].length - 1)
     const isExcluded = row === excludedGridRow && col === excludedGridCol
