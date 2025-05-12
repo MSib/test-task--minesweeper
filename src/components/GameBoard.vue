@@ -6,10 +6,27 @@ import { useMainStore } from '@/stores/main.js'
 import BoardCell from '@/components/BoardCell.vue'
 // @ts-ignore: calculateSerialNumber is used in the template
 import { calculateSerialNumber } from '@/gameLogic.ts'
+import { buttons as pointerButton, isTouchDevice as checkTouchSupport } from '@/usePointer.ts'
 
 const store = useMainStore()
-const { toggleDisplayOfSettings, setCellsRef, setDialogRef, restartGame, addWinner } = store
-const { selectedMode, flagsAvailable, timer, won, gameOver } = storeToRefs(store)
+const {
+  toggleDisplayOfSettings,
+  setCellsRef,
+  setDialogRef,
+  restartGame,
+  addWinner,
+  changeDevice,
+  changeEmulationButton,
+} = store
+const {
+  selectedMode,
+  flagsAvailable,
+  timer,
+  won,
+  gameOver,
+  isTouchDevice,
+  selectedEmulationButton,
+} = storeToRefs(store)
 const refs = useTemplateRef('cellRef')
 const dialogRef = useTemplateRef('dialog')
 const dialogInputRef = useTemplateRef('dialogInput')
@@ -29,6 +46,7 @@ onMounted(() => {
     setCellsRef(refs.value as unknown as RefCell[])
   }
   setDialogRef(dialogRef.value!, dialogInputRef.value!)
+  changeDevice(checkTouchSupport())
 })
 </script>
 
@@ -62,6 +80,29 @@ onMounted(() => {
           <BoardCell :row="row" :col="col" ref="cellRef" />
         </template>
       </template>
+    </div>
+    <div v-if="isTouchDevice" class="emulation-control">
+      <button
+        @click="changeEmulationButton(pointerButton.left)"
+        :class="{ 'emulation-button--selected': selectedEmulationButton === pointerButton.left }"
+        class="emulation-control__left emulation-button"
+        type="button"
+        title="Эмуляция левой кнопки мыши"
+      ></button>
+      <button
+        @click="changeEmulationButton(pointerButton.middle)"
+        :class="{ 'emulation-button--selected': selectedEmulationButton === pointerButton.middle }"
+        class="emulation-control__middle emulation-button"
+        type="button"
+        title="Эмуляция средней кнопки мыши"
+      ></button>
+      <button
+        @click="changeEmulationButton(pointerButton.right)"
+        :class="{ 'emulation-button--selected': selectedEmulationButton === pointerButton.right }"
+        class="emulation-control__right emulation-button"
+        type="button"
+        title="Эмуляция правой кнопки мыши"
+      ></button>
     </div>
     <dialog id="winnerDialog" class="dialog" ref="dialog">
       <p class="dialog__text">Вы победили!</p>
@@ -157,6 +198,46 @@ onMounted(() => {
 }
 .cells.defeat {
   background-color: #d55;
+}
+.emulation-control {
+  margin: 20px auto 0;
+  max-width: 500px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.emulation-button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  background-size: 75%;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.emulation-button--selected {
+  box-shadow: 0 2px 0 1px #fff;
+}
+.emulation-button--selected.emulation-control__left:not(:focus-visible) {
+  background-color: #444;
+}
+.emulation-button--selected.emulation-control__middle:not(:focus-visible),
+.emulation-button--selected.emulation-control__right:not(:focus-visible) {
+  background-color: #393;
+}
+.emulation-control__left {
+  background-image: url('/img/left-click-white.png');
+}
+.emulation-control__middle {
+  background-image: url('/img/middle-click-white.png');
+}
+.emulation-control__right {
+  background-image: url('/img/right-click-white.png');
+}
+.emulation-button:active {
+  transform: scale(1.1);
 }
 .dialog {
   border: 8px solid #000;

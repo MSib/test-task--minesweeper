@@ -4,6 +4,11 @@ import { useLocalStorage } from '@vueuse/core'
 import type { GameOptions, RefCell, Winner } from '@/types.ts'
 import { modes, type Mode } from '@/gameModes.ts'
 import { createField, calculateSerialNumber, showOpenableCells, MINED_CELL } from '@/gameLogic.ts'
+import {
+  type PointerButton,
+  buttons as emulateButtons,
+  isTouchDevice as checkTouchSupport,
+} from '@/usePointer.ts'
 
 export const useMainStore = defineStore('main', () => {
   const settingsAreDisplayed = ref(true)
@@ -19,7 +24,16 @@ export const useMainStore = defineStore('main', () => {
   const won = ref(false)
   const gameOver = ref(false)
   const winners = useLocalStorage('winners', [] as Winner[])
+  const isTouchDevice = ref(checkTouchSupport())
+  const selectedEmulationButton = ref<PointerButton>(emulateButtons.left)
 
+  function changeEmulationButton(button: PointerButton) {
+    selectedEmulationButton.value = button
+  }
+
+  function changeDevice(value: boolean) {
+    isTouchDevice.value = value
+  }
   function toggleDisplayOfSettings() {
     settingsAreDisplayed.value = !settingsAreDisplayed.value
   }
@@ -185,5 +199,9 @@ export const useMainStore = defineStore('main', () => {
     winners,
     addWinner,
     clearWinners,
+    isTouchDevice,
+    changeDevice,
+    selectedEmulationButton,
+    changeEmulationButton,
   }
 })
