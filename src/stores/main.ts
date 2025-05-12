@@ -65,6 +65,7 @@ export const useMainStore = defineStore('main', () => {
     if (!field.value) {
       return
     }
+    selectedEmulationButton.value = emulateButtons.left
     clearTimer()
     field.value = null
     cellsRef.value.forEach((cell) => {

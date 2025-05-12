@@ -125,11 +125,16 @@ onMounted(() => {
 <style scoped>
 .bar {
   margin: 0 auto;
-  max-width: 500px;
   margin-bottom: 10px;
+  padding: 4px;
+  max-width: 500px;
   display: flex;
   gap: 10px;
   justify-content: space-between;
+  border: 1px solid #555;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 2px 2px 2px #191919;
 }
 
 .counter,
@@ -140,7 +145,7 @@ onMounted(() => {
   gap: 4px;
   align-items: center;
   border: 2px solid transparent;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: inherit;
   user-select: none;
 }
@@ -158,7 +163,7 @@ onMounted(() => {
   border: none;
   cursor: pointer;
   border: 2px solid transparent;
-  border-radius: 4px;
+  border-radius: 8px;
   user-select: none;
 }
 

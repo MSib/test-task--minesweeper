@@ -134,6 +134,7 @@ function play() {
 
 <style scoped>
 .settings {
+  padding-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
