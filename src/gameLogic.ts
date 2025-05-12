@@ -1,6 +1,6 @@
 import { type Mode } from '@/gameModes.ts'
 /** The number that denotes a mine. Must be more than 8 (maximum number of warnings per cell) */
-export const MINED_CELL: number = 9
+export const MINED_CELL = 9
 const shifts = [
   [-1, -1],
   [-1, 0],
