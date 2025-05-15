@@ -16,6 +16,6 @@ import HeaderMenu from '@/components/HeaderMenu.vue'
 
 <style>
 .content {
-  padding: 10px;
+  padding: 0 10px 10px 10px;
 }
 </style>

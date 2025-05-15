@@ -1,17 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, useTemplateRef } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useMainStore } from '@/stores/main.js'
 import { MINED_CELL } from '@/gameLogic.ts'
+import { type PointerStatus, usePointer, buttons } from '@/usePointer.ts'
 
-const cell = ref(null)
+const cell = useTemplateRef('cell')
+usePointer({ target: cell })
 const cellValue = ref('')
-
+const isPressed = ref(false)
 const isOpen = ref(false)
 const isFlagged = ref(false)
-
-const isLongTouchPress = ref(false)
-const longPressTimerId = ref<number | undefined>(undefined)
-
 const flagTypes = {
   none: '',
   flag: '🚩',
@@ -24,7 +23,6 @@ const computedValue = computed(() => {
   if (isFlagged.value || currentFlag.value === flagTypes.maybe) {
     return currentFlag
   }
-
   if (cellValue.value === '0') {
     return ''
   }
@@ -47,26 +45,7 @@ const { row, col } = defineProps({
 
 const store = useMainStore()
 const { cellClicked, toggleFlag, incrementFlag, decrementFlag } = store
-
-function handleClick() {
-  if (isLongTouchPress.value) {
-    isLongTouchPress.value = false
-    return
-  }
-
-  if (isOpen.value || isFlagged.value) {
-    return
-  }
-  cellClicked(row, col)
-}
-
-function handleRightClick(evt?: MouseEvent) {
-  evt?.preventDefault()
-  if (isOpen.value) {
-    return
-  }
-  toggleFlag(row, col)
-}
+const { isTouchDevice, selectedEmulationButton, gameOver } = storeToRefs(store)
 
 function open(value: number) {
   if (isFlagged.value) {
@@ -80,7 +59,6 @@ function open(value: number) {
   isOpen.value = true
   return true
 }
-
 function changeFlag() {
   switch (currentFlag.value) {
     case flagTypes.flag:
@@ -91,7 +69,6 @@ function changeFlag() {
     case flagTypes.maybe:
       currentFlag.value = flagTypes.none
       break
-
     default:
       decrementFlag()
       currentFlag.value = flagTypes.flag
@@ -100,43 +77,86 @@ function changeFlag() {
   }
   return isFlagged.value
 }
-
 function resetCell() {
-  cell.value = null
   cellValue.value = ''
   isOpen.value = false
   isFlagged.value = false
   currentFlag.value = flagTypes.none
 }
-
-function handleTouchStart() {
-  const LONG_PRESS_DELAY = 300
-  clearTimeout(longPressTimerId.value)
-  isLongTouchPress.value = false
-  longPressTimerId.value = setTimeout(() => {
-    isLongTouchPress.value = true
-    if ('vibrate' in navigator) {
-      navigator.vibrate(100)
-    }
-    handleRightClick()
-  }, LONG_PRESS_DELAY)
+function onPointerClick(event: CustomEvent<PointerStatus>) {
+  if (gameOver.value) return
+  const { start, end, cancel } = event.detail
+  if (start) {
+    onStart(event)
+    return
+  }
+  if (end) {
+    onEnd(event)
+    return
+  }
+  if (cancel) {
+    onEnd(event, true)
+    return
+  }
 }
-
-function handleTouchEnd() {
-  clearTimeout(longPressTimerId.value)
-  // isLongTouchPress.value = false
+function onStart(event: CustomEvent<PointerStatus>) {
+  const { button } = event.detail
+  if (button === buttons.left && !isOpen.value && !isFlagged.value) {
+    isPressed.value = true
+  }
 }
-
-onMounted(() => {})
+function onEnd(event: CustomEvent<PointerStatus>, cancel = false) {
+  const { button, longPress } = event.detail
+  if (button === buttons.left) {
+    isPressed.value = false
+  }
+  if (cancel) return
+  let pointerButton = button
+  const isEmulateNotLeftButton = selectedEmulationButton.value !== buttons.left
+  const pressedLeftButton = button === buttons.left
+  if (isEmulateNotLeftButton && pressedLeftButton && isTouchDevice.value) {
+    pointerButton = selectedEmulationButton.value
+  }
+  if (pressedLeftButton && longPress && isTouchDevice.value) {
+    pointerButton = buttons.right
+  }
+  switch (pointerButton) {
+    case buttons.left:
+      onClick()
+      break
+    case buttons.right:
+      onRightClick()
+      break
+    case buttons.middle:
+      onMiddleClick()
+      break
+  }
+}
+function onClick() {
+  if (isOpen.value || isFlagged.value) {
+    return
+  }
+  cellClicked(row, col)
+}
+function onRightClick() {
+  if (isOpen.value) {
+    return
+  }
+  toggleFlag(row, col)
+}
+function onMiddleClick() {
+  //
+}
 </script>
 
 <template>
   <button
-    @touchstart="handleTouchStart"
-    @touchend="handleTouchEnd"
-    @click="handleClick"
-    @contextmenu="handleRightClick"
-    :class="{ open: isOpen, mined: cellValue === MINED_CELL.toString() && isOpen }"
+    @pointerClick="onPointerClick"
+    :class="{
+      open: isOpen,
+      mined: cellValue === MINED_CELL.toString() && isOpen,
+      pressed: isPressed,
+    }"
     :style="`--cell-color: var(--cell-color-${cellValue});`"
     type="button"
     tabindex="-1"
@@ -177,7 +197,6 @@ onMounted(() => {})
   -ms-user-select: none;
   user-select: none;
 }
-
 .cell:disabled {
   background: #efefef;
   color: #000;
@@ -189,5 +208,9 @@ onMounted(() => {})
 }
 .cell.mined {
   background-color: #e00;
+}
+.cell.pressed {
+  border: var(--border-size) inset #e2e2e2;
+  background-color: #e2e2e2;
 }
 </style>

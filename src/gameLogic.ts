@@ -1,6 +1,6 @@
 import { type Mode } from '@/gameModes.ts'
 /** The number that denotes a mine. Must be more than 8 (maximum number of warnings per cell) */
-export const MINED_CELL: number = 9
+export const MINED_CELL = 9
 const shifts = [
   [-1, -1],
   [-1, 0],
@@ -27,7 +27,8 @@ function miningField(
   excludedGridCol: number
 ) {
   let minesCount = 0
-  while (minesCount < minesTotal) {
+  const protectedMinesCount = Math.min(minesTotal, grid.length * grid[0].length - 1)
+  while (minesCount < protectedMinesCount) {
     const row = random(0, grid.length - 1)
     const col = random(0, grid[0].length - 1)
     const isExcluded = row === excludedGridRow && col === excludedGridCol

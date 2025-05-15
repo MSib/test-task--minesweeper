@@ -6,10 +6,27 @@ import { useMainStore } from '@/stores/main.js'
 import BoardCell from '@/components/BoardCell.vue'
 // @ts-ignore: calculateSerialNumber is used in the template
 import { calculateSerialNumber } from '@/gameLogic.ts'
+import { buttons as pointerButton, isTouchDevice as checkTouchSupport } from '@/usePointer.ts'
 
 const store = useMainStore()
-const { toggleDisplayOfSettings, setCellsRef, setDialogRef, restartGame, addWinner } = store
-const { selectedMode, flagsAvailable, timer, won, gameOver } = storeToRefs(store)
+const {
+  toggleDisplayOfSettings,
+  setCellsRef,
+  setDialogRef,
+  restartGame,
+  addWinner,
+  changeDevice,
+  changeEmulationButton,
+} = store
+const {
+  selectedMode,
+  flagsAvailable,
+  timer,
+  won,
+  gameOver,
+  isTouchDevice,
+  selectedEmulationButton,
+} = storeToRefs(store)
 const refs = useTemplateRef('cellRef')
 const dialogRef = useTemplateRef('dialog')
 const dialogInputRef = useTemplateRef('dialogInput')
@@ -29,6 +46,7 @@ onMounted(() => {
     setCellsRef(refs.value as unknown as RefCell[])
   }
   setDialogRef(dialogRef.value!, dialogInputRef.value!)
+  changeDevice(checkTouchSupport())
 })
 </script>
 
@@ -63,6 +81,34 @@ onMounted(() => {
         </template>
       </template>
     </div>
+    <div v-if="isTouchDevice" class="emulation-control">
+      <div class="emulation-control__inner">
+        <button
+          @click="changeEmulationButton(pointerButton.left)"
+          :class="{ 'emulation-button--selected': selectedEmulationButton === pointerButton.left }"
+          class="emulation-control__left emulation-button"
+          type="button"
+          title="Отключить эмуляцию"
+        ></button>
+        <!-- <button
+          @click="changeEmulationButton(pointerButton.middle)"
+          :class="{
+            'emulation-button--selected': selectedEmulationButton === pointerButton.middle,
+          }"
+          class="emulation-control__middle emulation-button"
+          type="button"
+          title="Эмуляция средней кнопки мыши"
+        ></button> -->
+        <button
+          @click="changeEmulationButton(pointerButton.right)"
+          :class="{ 'emulation-button--selected': selectedEmulationButton === pointerButton.right }"
+          class="emulation-control__right emulation-button"
+          type="button"
+          title="Эмуляция правой кнопки мыши"
+        ></button>
+      </div>
+      <p class="emulation-control__label">Эмуляция кнопок мыши</p>
+    </div>
     <dialog id="winnerDialog" class="dialog" ref="dialog">
       <p class="dialog__text">Вы победили!</p>
       <div class="dialog__inner">
@@ -84,11 +130,16 @@ onMounted(() => {
 <style scoped>
 .bar {
   margin: 0 auto;
-  max-width: 500px;
   margin-bottom: 10px;
+  padding: 4px;
+  max-width: 500px;
   display: flex;
   gap: 10px;
   justify-content: space-between;
+  border: 1px solid #555;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 2px 2px 2px #191919;
 }
 
 .counter,
@@ -99,7 +150,7 @@ onMounted(() => {
   gap: 4px;
   align-items: center;
   border: 2px solid transparent;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: inherit;
   user-select: none;
 }
@@ -117,7 +168,7 @@ onMounted(() => {
   border: none;
   cursor: pointer;
   border: 2px solid transparent;
-  border-radius: 4px;
+  border-radius: 8px;
   user-select: none;
 }
 
@@ -157,6 +208,64 @@ onMounted(() => {
 }
 .cells.defeat {
   background-color: #d55;
+}
+.emulation-control {
+  width: fit-content;
+  margin: 0 auto 0;
+  padding: 20px 40px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #555;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 3px 2px 2px #191919;
+}
+.emulation-control__inner {
+  max-width: 500px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+.emulation-control__label {
+  margin: 0;
+  font-size: 0.7em;
+  color: #e2e2e2;
+}
+.emulation-button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 50%;
+  background-size: 75%;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.emulation-button--selected {
+  box-shadow: 0 2px 0 1px #fff;
+}
+.emulation-button--selected.emulation-control__left:not(:focus-visible) {
+  background-color: #555;
+}
+.emulation-button--selected.emulation-control__middle:not(:focus-visible),
+.emulation-button--selected.emulation-control__right:not(:focus-visible) {
+  background-color: #393;
+}
+.emulation-control__left {
+  background-image: url('/img/left-click-white.png');
+}
+.emulation-control__middle {
+  background-image: url('/img/middle-click-white.png');
+}
+.emulation-control__right {
+  background-image: url('/img/right-click-white.png');
+}
+.emulation-button:active {
+  transform: scale(1.1);
 }
 .dialog {
   border: 8px solid #000;

@@ -11,6 +11,7 @@ const rows = ref(selectedMode.value.rows)
 const cols = ref(selectedMode.value.cols)
 const mines = ref(selectedMode.value.mines)
 const CUSTOM_MODE = 'custom'
+const MAXIMUM_MIN_PERCENTAGE_FOR_CUSTOM = 0.8
 
 const modeDetails = [
   {
@@ -64,6 +65,9 @@ function checkDetails() {
     const refRows = modeDetails.find((detail) => detail.name === 'rows')
     const refCols = modeDetails.find((detail) => detail.name === 'cols')
     const refMines = modeDetails.find((detail) => detail.name === 'mines')
+    const safeMaxMinesValue = Math.round(
+      rows.value * cols.value * MAXIMUM_MIN_PERCENTAGE_FOR_CUSTOM
+    )
     if (mode && refRows && refCols && refMines) {
       if (rows.value < refRows.min) {
         rows.value = refRows.min
@@ -77,8 +81,8 @@ function checkDetails() {
       }
       if (mines.value < refMines.min) {
         mines.value = refMines.min
-      } else if (mines.value > refMines.max) {
-        mines.value = refMines.max
+      } else if (mines.value > safeMaxMinesValue) {
+        mines.value = safeMaxMinesValue
       }
     }
   }
@@ -130,6 +134,7 @@ function play() {
 
 <style scoped>
 .settings {
+  padding-top: 10px;
   display: flex;
   flex-direction: column;
   gap: 10px;
