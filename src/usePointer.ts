@@ -56,13 +56,11 @@ function usePointer(options?: PointerOptions) {
   }
   let startTime = 0
   let pointerStatus = ref<PointerStatus>({ ...initialPointerStatus })
-  const events = ref<string[]>([])
-
+  let active = false
   function onStart(event: PointerEvent) {
     if (!event.isPrimary) return
     reset()
     initialDefinition(event)
-    events.value.push('start')
     sendButton()
   }
   function onCancel(event: PointerEvent) {
@@ -74,10 +72,8 @@ function usePointer(options?: PointerOptions) {
     pointerStatus.value.start = false
     if (cancel) {
       pointerStatus.value.cancel = true
-      events.value.push('cancel')
     } else {
       pointerStatus.value.end = true
-      events.value.push('end')
     }
     checkTime()
     sendButton()
@@ -89,17 +85,21 @@ function usePointer(options?: PointerOptions) {
   }
   function reset() {
     clear()
-    events.value = []
   }
   function initialDefinition(event: PointerEvent) {
-    pointerStatus.value.pointerId = event.pointerId
-    pointerStatus.value.button = identifyButton(event.button)
-    pointerStatus.value.type = identifyPointerType(event.pointerType)
-    pointerStatus.value.isMouse = pointerStatus.value.type === pointerTypes.mouse
-    pointerStatus.value.isTouch = pointerStatus.value.type === pointerTypes.touch
-    pointerStatus.value.isPen = pointerStatus.value.type === pointerTypes.pen
-    pointerStatus.value.start = true
-    startTime = Date.now()
+    const pointerType = identifyPointerType(event.pointerType)
+    const newStatus = {
+      pointerId: event.pointerId,
+      button: identifyButton(event.button),
+      type: pointerType,
+      isMouse: pointerType === pointerTypes.mouse,
+      isTouch: pointerType === pointerTypes.touch,
+      isPen: pointerType === pointerTypes.pen,
+      start: true,
+    }
+    startTime = Date.now(),
+      pointerStatus.value = { ...pointerStatus.value, ...newStatus }
+
   }
   function identifyPointerType(type: string): PointerType | null {
     try {
@@ -120,7 +120,7 @@ function usePointer(options?: PointerOptions) {
     const diff = Date.now() - startTime
     if (diff > 0) {
       pointerStatus.value.pressTime = diff
-      pointerStatus.value.longPress = pointerStatus.value.pressTime > LONG_PRESS
+      pointerStatus.value.longPress = diff > LONG_PRESS
     }
   }
   function sendButton() {
@@ -130,8 +130,19 @@ function usePointer(options?: PointerOptions) {
       options.target.value.dispatchEvent(pointerEvent)
     }
   }
+  function remove() {
+    if (options?.target?.value) {
+      active = false
+      const target = options.target.value
+      target.removeEventListener('pointerdown', onStart)
+      target.removeEventListener('pointerup', onEnd)
+      target.removeEventListener('pointerleave', onCancel)
+      target.removeEventListener('pointercancel', onCancel)
+    }
+  }
   onMounted(() => {
     if (options?.target?.value) {
+      active = true
       const target = options.target.value
       target.addEventListener('pointerdown', onStart)
       target.addEventListener('pointerup', onEnd)
@@ -141,7 +152,7 @@ function usePointer(options?: PointerOptions) {
     }
   })
 
-  return { pointerStatus, pointerEvents: events, cancel: onCancel, reset }
+  return { active, pointerStatus, remove }
 }
 
 type PointerButtons = typeof buttons

@@ -3,13 +3,12 @@ import { ref, computed, useTemplateRef } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useMainStore } from '@/stores/main.js'
 import { MINED_CELL } from '@/gameLogic.ts'
-import { type PointerState, usePointer, buttons } from '@/usePointer.ts'
+import { type PointerStatus, usePointer, buttons } from '@/usePointer.ts'
 
 const cell = useTemplateRef('cell')
-// @ts-ignore
-const pointer = usePointer({ target: cell })
-
+usePointer({ target: cell })
 const cellValue = ref('')
+const isPressed = ref(false)
 const isOpen = ref(false)
 const isFlagged = ref(false)
 const flagTypes = {
@@ -24,7 +23,6 @@ const computedValue = computed(() => {
   if (isFlagged.value || currentFlag.value === flagTypes.maybe) {
     return currentFlag
   }
-
   if (cellValue.value === '0') {
     return ''
   }
@@ -47,23 +45,8 @@ const { row, col } = defineProps({
 
 const store = useMainStore()
 const { cellClicked, toggleFlag, incrementFlag, decrementFlag } = store
-const { isTouchDevice, selectedEmulationButton } = storeToRefs(store)
+const { isTouchDevice, selectedEmulationButton, gameOver } = storeToRefs(store)
 
-function onClick() {
-  if (isOpen.value || isFlagged.value) {
-    return
-  }
-  cellClicked(row, col)
-}
-function onRightClick() {
-  if (isOpen.value) {
-    return
-  }
-  toggleFlag(row, col)
-}
-function onMiddleClick() {
-  console.log('middle')
-}
 function open(value: number) {
   if (isFlagged.value) {
     return
@@ -86,7 +69,6 @@ function changeFlag() {
     case flagTypes.maybe:
       currentFlag.value = flagTypes.none
       break
-
     default:
       decrementFlag()
       currentFlag.value = flagTypes.flag
@@ -101,13 +83,44 @@ function resetCell() {
   isFlagged.value = false
   currentFlag.value = flagTypes.none
 }
-function onPointerClick(event: CustomEvent<PointerState>) {
-  const { button: pointerButton } = event.detail
-  let button = pointerButton
-  if (selectedEmulationButton.value !== buttons.left && isTouchDevice.value) {
-    button = selectedEmulationButton.value
+function onPointerClick(event: CustomEvent<PointerStatus>) {
+  if (gameOver.value) return
+  const { start, end, cancel } = event.detail
+  if (start) {
+    onStart(event)
+    return
   }
-  switch (button) {
+  if (end) {
+    onEnd(event)
+    return
+  }
+  if (cancel) {
+    onEnd(event, true)
+    return
+  }
+}
+function onStart(event: CustomEvent<PointerStatus>) {
+  const { button } = event.detail
+  if (button === buttons.left && !isOpen.value && !isFlagged.value) {
+    isPressed.value = true
+  }
+}
+function onEnd(event: CustomEvent<PointerStatus>, cancel = false) {
+  const { button, longPress } = event.detail
+  if (button === buttons.left) {
+    isPressed.value = false
+  }
+  if (cancel) return
+  let pointerButton = button
+  const isEmulateNotLeftButton = selectedEmulationButton.value !== buttons.left
+  const pressedLeftButton = button === buttons.left
+  if (isEmulateNotLeftButton && pressedLeftButton && isTouchDevice.value) {
+    pointerButton = selectedEmulationButton.value
+  }
+  if (pressedLeftButton && longPress && isTouchDevice.value) {
+    pointerButton = buttons.right
+  }
+  switch (pointerButton) {
     case buttons.left:
       onClick()
       break
@@ -119,12 +132,31 @@ function onPointerClick(event: CustomEvent<PointerState>) {
       break
   }
 }
+function onClick() {
+  if (isOpen.value || isFlagged.value) {
+    return
+  }
+  cellClicked(row, col)
+}
+function onRightClick() {
+  if (isOpen.value) {
+    return
+  }
+  toggleFlag(row, col)
+}
+function onMiddleClick() {
+  //
+}
 </script>
 
 <template>
   <button
     @pointerClick="onPointerClick"
-    :class="{ open: isOpen, mined: cellValue === MINED_CELL.toString() && isOpen }"
+    :class="{
+      open: isOpen,
+      mined: cellValue === MINED_CELL.toString() && isOpen,
+      pressed: isPressed,
+    }"
     :style="`--cell-color: var(--cell-color-${cellValue});`"
     type="button"
     tabindex="-1"
@@ -165,7 +197,6 @@ function onPointerClick(event: CustomEvent<PointerState>) {
   -ms-user-select: none;
   user-select: none;
 }
-
 .cell:disabled {
   background: #efefef;
   color: #000;
@@ -177,5 +208,9 @@ function onPointerClick(event: CustomEvent<PointerState>) {
 }
 .cell.mined {
   background-color: #e00;
+}
+.cell.pressed {
+  border: var(--border-size) inset #e2e2e2;
+  background-color: #e2e2e2;
 }
 </style>

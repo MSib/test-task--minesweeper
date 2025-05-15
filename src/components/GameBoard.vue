@@ -82,27 +82,32 @@ onMounted(() => {
       </template>
     </div>
     <div v-if="isTouchDevice" class="emulation-control">
-      <button
-        @click="changeEmulationButton(pointerButton.left)"
-        :class="{ 'emulation-button--selected': selectedEmulationButton === pointerButton.left }"
-        class="emulation-control__left emulation-button"
-        type="button"
-        title="Эмуляция левой кнопки мыши"
-      ></button>
-      <button
-        @click="changeEmulationButton(pointerButton.middle)"
-        :class="{ 'emulation-button--selected': selectedEmulationButton === pointerButton.middle }"
-        class="emulation-control__middle emulation-button"
-        type="button"
-        title="Эмуляция средней кнопки мыши"
-      ></button>
-      <button
-        @click="changeEmulationButton(pointerButton.right)"
-        :class="{ 'emulation-button--selected': selectedEmulationButton === pointerButton.right }"
-        class="emulation-control__right emulation-button"
-        type="button"
-        title="Эмуляция правой кнопки мыши"
-      ></button>
+      <div class="emulation-control__inner">
+        <button
+          @click="changeEmulationButton(pointerButton.left)"
+          :class="{ 'emulation-button--selected': selectedEmulationButton === pointerButton.left }"
+          class="emulation-control__left emulation-button"
+          type="button"
+          title="Отключить эмуляцию"
+        ></button>
+        <!-- <button
+          @click="changeEmulationButton(pointerButton.middle)"
+          :class="{
+            'emulation-button--selected': selectedEmulationButton === pointerButton.middle,
+          }"
+          class="emulation-control__middle emulation-button"
+          type="button"
+          title="Эмуляция средней кнопки мыши"
+        ></button> -->
+        <button
+          @click="changeEmulationButton(pointerButton.right)"
+          :class="{ 'emulation-button--selected': selectedEmulationButton === pointerButton.right }"
+          class="emulation-control__right emulation-button"
+          type="button"
+          title="Эмуляция правой кнопки мыши"
+        ></button>
+      </div>
+      <p class="emulation-control__label">Эмуляция кнопок мыши</p>
     </div>
     <dialog id="winnerDialog" class="dialog" ref="dialog">
       <p class="dialog__text">Вы победили!</p>
@@ -205,11 +210,29 @@ onMounted(() => {
   background-color: #d55;
 }
 .emulation-control {
-  margin: 20px auto 0;
+  width: fit-content;
+  margin: 0 auto 0;
+  padding: 20px 40px 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #555;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 3px 2px 2px #191919;
+}
+.emulation-control__inner {
   max-width: 500px;
   display: flex;
   gap: 10px;
   justify-content: center;
+}
+.emulation-control__label {
+  margin: 0;
+  font-size: 0.7em;
+  color: #e2e2e2;
 }
 .emulation-button {
   width: 40px;
@@ -226,7 +249,7 @@ onMounted(() => {
   box-shadow: 0 2px 0 1px #fff;
 }
 .emulation-button--selected.emulation-control__left:not(:focus-visible) {
-  background-color: #444;
+  background-color: #555;
 }
 .emulation-button--selected.emulation-control__middle:not(:focus-visible),
 .emulation-button--selected.emulation-control__right:not(:focus-visible) {
