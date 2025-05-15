@@ -4,15 +4,17 @@ import { ref, type ShallowRef, onMounted } from 'vue'
  * Numbering in accordance with the documentation
  * @see https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/button
  */
-export const buttons = {
+const buttons = {
   left: 0,
   middle: 1,
   right: 2,
 } as const
-const LONG_PRESS = 500 // ms
-const TOUCH_DISTANCE_LIMIT = 20 // px
-
-export const isTouchDevice = () => {
+const pointerTypes = {
+  mouse: 'mouse',
+  pen: 'pen',
+  touch: 'touch',
+} as const
+function isTouchDevice() {
   return (
     'ontouchstart' in window ||
     navigator.maxTouchPoints > 0 ||
@@ -23,13 +25,11 @@ export const isTouchDevice = () => {
 /* Example of use
 <script setup lang="ts">
 import { useTemplateRef } from 'vue'
-import { usePointer, type PointerState } from './usePointer.ts'
+import { usePointer, type PointerStatus } from './usePointer.ts'
 
 const targetElement = useTemplateRef('target-button')
-const pointer = usePointer({ target: targetElement })
-const { state: pointerState } = pointer
-
-function onPointerClick(event: CustomEvent<PointerState>) {
+usePointer({ target: targetElement })
+function onPointerClick(event: CustomEvent<PointerStatus>) {
   const { button } = event.detail
   console.log('button', button)
 }
@@ -39,131 +39,133 @@ function onPointerClick(event: CustomEvent<PointerState>) {
 </template>
 */
 
-export function usePointer(options?: PointerOptions) {
-  const initialState: PointerState = {
-    isTouch: false,
+function usePointer(options?: PointerOptions) {
+  const LONG_PRESS = 500 // ms
+  const initialPointerStatus: PointerStatus = {
+    pointerId: 0,
     button: null,
+    type: null,
+    isMouse: false,
+    isTouch: false,
+    isPen: false,
+    start: false,
+    end: false,
+    cancel: false,
+    pressTime: 0,
+    longPress: false,
   }
-
-  const state = ref<PointerState>({ ...initialState })
+  let startTime = 0
+  let pointerStatus = ref<PointerStatus>({ ...initialPointerStatus })
   const events = ref<string[]>([])
-  let pointer = false
-  let touchX = 0
-  let touchY = 0
-  const touchTimer = ref<number | null>(null)
-  const touchLeave = ref(false)
 
-  const stateReset = () => {
+  function onStart(event: PointerEvent) {
+    if (!event.isPrimary) return
+    reset()
+    initialDefinition(event)
+    events.value.push('start')
+    sendButton()
+  }
+  function onCancel(event: PointerEvent) {
+    onEnd(event, true)
+  }
+  function onEnd(event: PointerEvent, cancel = false) {
+    if (!event.isPrimary) return
+    if (pointerStatus.value.pointerId !== event.pointerId) return
+    pointerStatus.value.start = false
+    if (cancel) {
+      pointerStatus.value.cancel = true
+      events.value.push('cancel')
+    } else {
+      pointerStatus.value.end = true
+      events.value.push('end')
+    }
+    checkTime()
+    sendButton()
+    clear()
+  }
+  function clear() {
+    pointerStatus.value = { ...initialPointerStatus }
+    startTime = 0
+  }
+  function reset() {
+    clear()
     events.value = []
-    state.value = { ...initialState }
-    pointer = false
-    touchX = 0
-    touchY = 0
   }
-  const onPointer = (event: PointerEvent) => {
-    if (pointer || state.value.button) stateReset()
-    if (!pointer) {
-      pointer = true
-    }
-    events.value.push('pointerdown')
-    if (event.button === buttons.middle) {
-      onMiddleClick()
-    }
+  function initialDefinition(event: PointerEvent) {
+    pointerStatus.value.pointerId = event.pointerId
+    pointerStatus.value.button = identifyButton(event.button)
+    pointerStatus.value.type = identifyPointerType(event.pointerType)
+    pointerStatus.value.isMouse = pointerStatus.value.type === pointerTypes.mouse
+    pointerStatus.value.isTouch = pointerStatus.value.type === pointerTypes.touch
+    pointerStatus.value.isPen = pointerStatus.value.type === pointerTypes.pen
+    pointerStatus.value.start = true
+    startTime = Date.now()
   }
-  const onTouchStart = (event: TouchEvent) => {
-    if (!pointer) {
-      pointer = true
-    }
-    state.value.isTouch = true
-    touchX = event.touches[0].clientX
-    touchY = event.touches[0].clientY
-    touchLeave.value = false
-    touchTimer.value = setTimeout(() => {
-      onLongPress()
-      events.value.push('longpress')
-    }, options?.longPress ?? LONG_PRESS)
-    events.value.push('touchstart')
-  }
-  const onTouchEnd = () => {
-    if (touchTimer.value) clearTimeout(touchTimer.value)
-    touchTimer.value = null
-    events.value.push('touchend')
-  }
-  const onTouchMove = (event: TouchEvent) => {
-    if (touchLeave.value) return
-    if (touchTimer.value) clearTimeout(touchTimer.value)
-    touchTimer.value = null
-    const shiftX = Math.abs(touchX - event.touches[0].clientX)
-    const shiftY = Math.abs(touchY - event.touches[0].clientY)
-    const leaveDistance = options?.leaveDistance ?? TOUCH_DISTANCE_LIMIT
-    touchLeave.value = shiftX > leaveDistance || shiftY > leaveDistance
-
-    if (!touchLeave.value) return
-    if (touchTimer.value) clearTimeout(touchTimer.value)
-    touchTimer.value = null
-    events.value.push('touchleave')
-  }
-  const onClick = () => {
-    if ((pointer || state.value.isTouch) && state.value.button === null) {
-      state.value.button = buttons.left
-      sendButton()
-    }
-    events.value.push('click')
-  }
-  const onMiddleClick = () => {
-    if (pointer && state.value.button === null) {
-      state.value.button = buttons.middle
-      sendButton()
-    }
-    events.value.push('click.middle')
-  }
-  const onContextmenu = (event: MouseEvent) => {
-    event.preventDefault()
-    if (state.value.button !== null && !state.value.isTouch) stateReset()
-    if (state.value.button === null) {
-      state.value.button = buttons.right
-      sendButton()
-    }
-    events.value.push('contextmenu')
-  }
-  const onLongPress = () => {
-    if (pointer && state.value.button === null) {
-      state.value.button = buttons.right
-      sendButton()
+  function identifyPointerType(type: string): PointerType | null {
+    try {
+      return pointerTypes[type as keyof typeof pointerTypes]
+    } catch (_) {
+      return null
     }
   }
-  const sendButton = () => {
-    const withTouch = options?.touch !== false || !state.value.isTouch
+  function identifyButton(button: number): PointerButton | null {
+    switch (button) {
+      case buttons.left: return buttons.left
+      case buttons.middle: return buttons.middle
+      case buttons.right: return buttons.right
+      default: return null
+    }
+  }
+  function checkTime() {
+    const diff = Date.now() - startTime
+    if (diff > 0) {
+      pointerStatus.value.pressTime = diff
+      pointerStatus.value.longPress = pointerStatus.value.pressTime > LONG_PRESS
+    }
+  }
+  function sendButton() {
+    const withTouch = options?.touch !== false || !pointerStatus.value.isTouch
     if (options?.target?.value && withTouch) {
-      const pointerEvent = new CustomEvent<PointerState>('pointerClick', { detail: { ...state.value } })
+      const pointerEvent = new CustomEvent<PointerStatus>('pointerClick', { detail: { ...pointerStatus.value } })
       options.target.value.dispatchEvent(pointerEvent)
     }
   }
   onMounted(() => {
     if (options?.target?.value) {
       const target = options.target.value
-      target.addEventListener('pointerdown', onPointer)
-      target.addEventListener('touchstart', onTouchStart)
-      target.addEventListener('touchend', onTouchEnd)
-      target.addEventListener('touchmove', onTouchMove)
-      target.addEventListener('click', onClick)
-      target.addEventListener('contextmenu', onContextmenu)
+      target.addEventListener('pointerdown', onStart)
+      target.addEventListener('pointerup', onEnd)
+      target.addEventListener('pointerleave', onCancel)
+      target.addEventListener('pointercancel', onCancel)
+      target.addEventListener('contextmenu', (event) => event.preventDefault())
     }
   })
 
-  return { state, events, stateReset }
+  return { pointerStatus, pointerEvents: events, cancel: onCancel, reset }
 }
 
 type PointerButtons = typeof buttons
 type PointerButton = PointerButtons[keyof PointerButtons]
-type PointerState = {
-  isTouch: boolean
+type PointerTypes = typeof pointerTypes
+type PointerType = PointerTypes[keyof PointerTypes]
+type PointerStatus = {
+  pointerId: number,
   button: PointerButton | null
+  type: PointerType | null,
+  isMouse: boolean,
+  isTouch: boolean
+  isPen: boolean,
+  start: boolean,
+  end: boolean,
+  cancel: boolean,
+  pressTime: number,
+  longPress: boolean,
 }
 type PointerOptions = {
   target?: ShallowRef<HTMLButtonElement | null>
   touch?: boolean // false for refusal
   longPress?: number // ms
-  leaveDistance?: number // px
 }
-export type { PointerButtons, PointerButton, PointerOptions, PointerState }
+export type { PointerButtons, PointerButton, PointerOptions, PointerStatus }
+
+export { buttons, isTouchDevice, pointerTypes, usePointer, }
